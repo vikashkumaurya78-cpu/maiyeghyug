@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amber">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>XAU/USDT · SCALPING TERMINAL · Binance Real-Time</title>
+<meta name="description" content="Bloomberg-style XAU/USDT scalping terminal. 9 timeframes, real-time Binance Futures data, Signal Lock with ideal entry, stop loss and targets." />
+<link rel="stylesheet" href="css/terminal.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230b0e11'/><text y='24' x='4' font-size='20' fill='%23f0a020'>&#9632;</text></svg>" />
+</head>
+<body>
+
+<div id="boot" class="boot">
+  <div class="boot-inner">
+    <div class="boot-title">XAU/USDT SCALPING TERMINAL</div>
+    <div class="boot-sub">BINANCE FUTURES · REAL-TIME MARKET DATA</div>
+    <div class="boot-bar"><i id="bootBar"></i></div>
+    <div class="boot-msg" id="bootMsg">Initializing…</div>
+  </div>
+</div>
+
+<!-- ══════════════ TOP BAR ══════════════ -->
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">■</span>
+    <span class="brand-name">AURUM<span class="brand-thin">X</span></span>
+    <span class="brand-tag">TERMINAL</span>
+  </div>
+
+  <div class="sym-block">
+    <div class="sym">XAU<span class="sym-slash">/</span>USDT</div>
+    <div class="sym-meta">BINANCE · REAL-TIME GOLD · 1:1 PHYSICAL OZ</div>
+  </div>
+
+  <div class="quote">
+    <div class="last" id="qLast">—</div>
+    <div class="chg" id="qChg">—</div>
+  </div>
+
+  <div class="tb-grid">
+    <div class="tb-cell"><label>BID</label><b id="qBid">—</b></div>
+    <div class="tb-cell"><label>ASK</label><b id="qAsk">—</b></div>
+    <div class="tb-cell"><label>SPREAD</label><b id="qSpread">—</b></div>
+    <div class="tb-cell"><label>MID</label><b id="qMark">—</b></div>
+    <div class="tb-cell"><label>Δ ARB</label><b id="qFunding">—</b></div>
+    <div class="tb-cell"><label>24H H</label><b id="qHigh">—</b></div>
+    <div class="tb-cell"><label>24H L</label><b id="qLow">—</b></div>
+    <div class="tb-cell"><label>24H VOL</label><b id="qVol">—</b></div>
+    <div class="tb-cell"><label>TRADES</label><b id="qTrades">—</b></div>
+    <div class="tb-cell"><label>Δ XAUT</label><b id="qXdev">—</b></div>
+  </div>
+
+  <div class="tb-status">
+    <div class="st-row"><span class="dot" id="feedDot"></span><span id="feedState">CONNECTING</span></div>
+    <div class="st-row st-dim">LAT <b id="latNow">—</b> · P95 <b id="latP95">—</b></div>
+    <div class="st-row st-dim">EVT <b id="evtCount">0</b>/s</div>
+  </div>
+
+  <div class="clock">
+    <div class="ck-exchange"><label>EXCHANGE EVT (ms)</label><b id="clockEx">—</b></div>
+    <div class="ck-local"><label>LOCAL RENDER (µs)</label><b id="clockLocal">—</b></div>
+    <div class="ck-bar"><label>NEXT BAR</label><b id="barCountdown">—</b></div>
+  </div>
+</header>
+
+<!-- ══════════════ TIMEFRAME SWITCH ══════════════ -->
+<nav class="tfbar">
+  <span class="tf-label">TIMEFRAME</span>
+  <div class="tf-btns" id="tfBtns"><!-- injected --></div>
+  <span class="tf-sep"></span>
+  <button class="tgl" id="tglAutoSwitch" aria-pressed="false" title="Auto-jump chart to the timeframe that fires a new Signal Lock">AUTO-SWITCH</button>
+  <button class="tgl" id="tglSound" aria-pressed="true" title="Audible alert on Signal Lock / target / stop">SOUND</button>
+  <button class="tgl" id="tglMethod" title="How every signal is computed">METHODOLOGY</button>
+  <span class="tf-grow"></span>
+  <span class="tf-hint">CLICK ANY MTF MATRIX ROW TO SWITCH</span>
+</nav>
+
+<!-- ══════════════ MAIN GRID ══════════════ -->
+<main class="grid">
+
+  <!-- ─── LEFT COLUMN ─── -->
+  <section class="col col-left">
+    <article class="panel p-mtf">
+      <header class="ph"><h2>MTF CONFLUENCE MATRIX</h2><span class="ph-r" id="mtfSync">—</span></header>
+      <div class="phdr">
+        <span>TF</span><span>BIAS</span><span>SCORE</span><span>RSI</span><span>ADX</span><span>ATR%</span><span>STATE</span>
+      </div>
+      <div class="mrows" id="mtfRows"></div>
+      <footer class="pf" id="mtfFoot">higher-timeframe bias filters every lock</footer>
+    </article>
+
+    <article class="panel p-ind">
+      <header class="ph"><h2>INDICATOR MATRIX</h2><span class="ph-r" id="indTf">—</span></header>
+      <div class="irows" id="indRows"></div>
+    </article>
+
+    <article class="panel p-xmkt">
+      <header class="ph"><h2>GOLD CROSS-MARKET</h2><span class="ph-r">Binance spot</span></header>
+      <div class="xrows" id="xmktRows"></div>
+      <footer class="pf">XAUUSDT perp vs tokenised-gold spot. Deviation = perp − spot.</footer>
+    </article>
+
+    <article class="panel p-risk">
+      <header class="ph"><h2>POSITION &amp; RISK</h2><span class="ph-r" id="riskSide">—</span></header>
+      <div class="risk-body">
+        <div class="risk-in">
+          <label>ACCOUNT USDT</label><input type="number" id="rAcc" value="10000" min="1" step="100" />
+        </div>
+        <div class="risk-in">
+          <label>RISK %</label><input type="number" id="rRisk" value="1" min="0.01" max="100" step="0.1" />
+        </div>
+        <div class="risk-out" id="riskOut">
+          <div><span>STOP DIST</span><b id="rStop">—</b></div>
+          <div><span>SIZE</span><b id="rSize">—</b></div>
+          <div><span>NOTIONAL</span><b id="rNotional">—</b></div>
+          <div><span>RISK $</span><b id="rMoney">—</b></div>
+          <div><span>TP1 R</span><b id="rR1">—</b></div>
+          <div><span>TP2 R</span><b id="rR2">—</b></div>
+          <div><span>TP3 R</span><b id="rR3">—</b></div>
+          <div><span>MAX LOSS</span><b id="rMax">—</b></div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ─── CENTER COLUMN ─── -->
+  <section class="col col-center">
+    <article class="panel p-chart">
+      <header class="ph">
+        <h2 id="chartTitle">XAUUSDT · 1m · BINANCE</h2>
+        <div class="ohlc" id="ohlc">
+          <span>O<b id="cO">—</b></span><span>H<b id="cH">—</b></span>
+          <span>L<b id="cL">—</b></span><span>C<b id="cC">—</b></span>
+          <span>V<b id="cV">—</b></span><span>Δ<b id="cD">—</b></span>
+        </div>
+        <div class="ov-toggles" id="ovToggles"></div>
+      </header>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+        <canvas id="chartFx"></canvas>
+        <div class="chart-badge" id="chartBadge">WARMING UP…</div>
+        <div class="lock-fly" id="lockFly"></div>
+      </div>
+      <div class="sub-wrap">
+        <div class="sub" data-sub="vol"><span class="sub-t">VOLUME</span><canvas></canvas></div>
+        <div class="sub" data-sub="rsi"><span class="sub-t">RSI 14</span><canvas></canvas></div>
+        <div class="sub" data-sub="macd"><span class="sub-t">MACD 12/26/9</span><canvas></canvas></div>
+      </div>
+    </article>
+
+    <article class="panel p-strap">
+      <div class="strap" id="strap">
+        <div class="st-cell"><label>ENGINE SCORE</label><b id="sScore">—</b></div>
+        <div class="st-cell"><label>BIAS</label><b id="sBias">—</b></div>
+        <div class="st-cell"><label>CONFIRM BARS</label><b id="sConf">—</b></div>
+        <div class="st-cell"><label>HTF FILTER</label><b id="sHtf">—</b></div>
+        <div class="st-cell"><label>VOLATILITY</label><b id="sVol">—</b></div>
+        <div class="st-cell"><label>ATR (14)</label><b id="sAtr">—</b></div>
+        <div class="st-cell"><label>SESSION</label><b id="sSession">—</b></div>
+        <div class="st-cell"><label>BARS TODAY</label><b id="sBars">—</b></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ─── RIGHT COLUMN ─── -->
+  <section class="col col-right">
+    <article class="panel p-lock" id="lockPanel">
+      <header class="ph"><h2>SIGNAL LOCK</h2><span class="ph-r" id="lockTf">—</span></header>
+
+      <div class="lock-tf-switcher" id="lockTfSwitcher">
+        <span class="lts-title">SIGNAL TF:</span>
+        <div class="lts-pills" id="ltsPills"><!-- Injected by panels.js --></div>
+      </div>
+
+      <div class="lock-empty" id="lockEmpty">
+        <div class="le-ring">◎</div>
+        <div class="le-txt">SCANNING FOR SIGNAL LOCK ON <b id="lockEmptyTf">1m</b></div>
+        <div class="le-sub">Scanning closed candles & order flow. Signal Lock arms automatically when confluence gates pass, or arm manually for instant precision scalp setup.</div>
+        <div class="gates" id="gatesMini"></div>
+        <div class="lock-empty-actions">
+          <button class="btn btn-arm" id="btnArmNow">⚡ ARM SIGNAL LOCK NOW</button>
+          <button class="btn" id="btnRescanEmpty">FORCE RESCAN</button>
+        </div>
+      </div>
+
+      <div class="lock-live hidden" id="lockLive">
+        <div class="lock-head">
+          <div class="lh-dir" id="lkDir">—</div>
+          <div class="lh-mid">
+            <div class="lh-conf"><i id="lkConfBar"></i></div>
+            <div class="lh-conf-t">CONFIDENCE <b id="lkConf">—</b><span class="lh-badge" id="lkBadge">SCALP LOCK</span></div>
+          </div>
+          <div class="lh-st" id="lkStatus">—</div>
+        </div>
+
+        <div class="lock-grid">
+          <div class="lg-cell lg-entry"><label>IDEAL ENTRY</label><b id="lkEntry">—</b></div>
+          <div class="lg-cell lg-zone"><label>ENTRY ZONE</label><b id="lkZone">—</b></div>
+          <div class="lg-cell lg-stop"><label>STOP LOSS</label><b id="lkStop">—</b></div>
+          <div class="lg-cell lg-r"><label>RISK / UNIT</label><b id="lkRisk">—</b></div>
+          <div class="lg-cell lg-tp"><label>TARGET 1</label><b id="lkTp1">—</b><em id="lkTp1r"></em></div>
+          <div class="lg-cell lg-tp"><label>TARGET 2</label><b id="lkTp2">—</b><em id="lkTp2r"></em></div>
+          <div class="lg-cell lg-tp"><label>TARGET 3</label><b id="lkTp3">—</b><em id="lkTp3r"></em></div>
+          <div class="lg-cell lg-rr"><label>REWARD : RISK</label><b id="lkRR">—</b></div>
+        </div>
+
+        <div class="lock-track">
+          <div class="lt-bar"><i id="ltFill"></i><span class="lt-stop" id="ltStop"></span></div>
+          <div class="lt-lbls"><span id="ltStopLbl">SL</span><span>ENTRY</span><span id="ltTpLbl">TP</span></div>
+        </div>
+
+        <div class="lock-meta">
+          <div><span>LOCK ID</span><b id="lkId">—</b></div>
+          <div><span>LOCKED AT</span><b id="lkAt">—</b></div>
+          <div><span>VALID UNTIL</span><b id="lkExp">—</b></div>
+          <div><span>OPEN P/L</span><b id="lkPnl">—</b></div>
+        </div>
+
+        <div class="lock-why">
+          <header>LOCK RATIONALE</header>
+          <ul id="lkWhy"></ul>
+        </div>
+
+        <div class="lock-acts">
+          <button class="btn btn-ghost" id="btnRelease">RELEASE LOCK</button>
+          <button class="btn btn-ghost" id="btnNewScan">RESCAN</button>
+        </div>
+      </div>
+
+      <div class="lock-hist">
+        <header class="lh-h">LOCK HISTORY <span id="lkHistN">0</span></header>
+        <div class="lh-list" id="lockHist"></div>
+      </div>
+    </article>
+
+    <article class="panel p-book">
+      <header class="ph"><h2>ORDER BOOK</h2><span class="ph-r" id="bookSpread">—</span></header>
+      <div class="bk-hdr"><span>PRICE</span><span>SIZE</span><span>SUM</span><span></span></div>
+      <div class="bk asks" id="bkAsks"></div>
+      <div class="bk-mid"><b id="bkMid">—</b><span id="bkMidChg">—</span></div>
+      <div class="bk bids" id="bkBids"></div>
+      <footer class="pf" id="bookImb">—</footer>
+    </article>
+
+    <article class="panel p-tape">
+      <header class="ph"><h2>TIME &amp; SALES</h2><span class="ph-r" id="tapeRate">—</span></header>
+      <div class="tp-hdr"><span>TIME</span><span>PRICE</span><span>SIZE</span><span>Σ</span></header>
+      <div class="tape" id="tape"></div>
+    </article>
+
+    <article class="panel p-log">
+      <header class="ph"><h2>EVENT LOG</h2><button class="btn-tiny" id="btnClearLog">CLEAR</button></header>
+      <div class="log" id="log"></div>
+    </article>
+  </section>
+</main>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer class="footer">
+  <span class="f-chip" id="fSrc">SRC: —</span>
+  <span class="f-chip" id="fStreams">STREAMS: —</span>
+  <span class="f-chip" id="fBars">BARS: —</span>
+  <span class="f-chip" id="fClock">SERVER TIME Δ —</span>
+  <span class="f-grow"></span>
+  <span class="f-note">Binance streams tick-level events; exchange timestamps are millisecond-resolution. Signals are decision support, not financial advice.</span>
+</footer>
+
+<!-- ══════════════ METHODOLOGY ══════════════ -->
+<div class="modal hidden" id="method">
+  <div class="modal-card">
+    <header class="modal-h">
+      <h2>SIGNAL LOCK · METHODOLOGY</h2>
+      <button class="x" data-close>×</button>
+    </header>
+    <div class="modal-b" id="methodBody"></div>
+  </div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/indicators.js"></script>
+<script src="js/binance.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
